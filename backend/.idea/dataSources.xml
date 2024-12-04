@@ -22,5 +22,12 @@
       <jdbc-url>jdbc:postgresql://dpg-crkko2rtq21c73dbgh9g-a.oregon-postgres.render.com:5432/ananya_vylz</jdbc-url>
       <working-dir>$ProjectFileDir$</working-dir>
     </data-source>
+    <data-source source="LOCAL" name="PostgreSQL" uuid="17511f4b-cd3b-4c63-988f-a920d3cb2bd5">
+      <driver-ref>postgresql</driver-ref>
+      <synchronize>true</synchronize>
+      <jdbc-driver>org.postgresql.Driver</jdbc-driver>
+      <jdbc-url>jdbc:postgresql://dpg-crkko2rtq21c73dbgh9g-a.oregon-postgres.render.com :5432/ananya_vylz</jdbc-url>
+      <working-dir>$ProjectFileDir$</working-dir>
+    </data-source>
   </component>
 </project>
