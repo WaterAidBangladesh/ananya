@@ -28,14 +28,15 @@ class Chain:
             n_results=3
         ).get('documents')
 
-        template = """    
+        template = """
         ### QUESTION FROM USER
         {user_question}
         ### ANSWER FROM VECTOR DATABASE CREATED BY CHROMADB
         {answer}
         ### INSTRUCTIONS
-        You are an expert for answering menstrual period related question. Your job is to connect user question and answer and no need to repeat your question. For large response, you can use points rather than heavy answer. IF there is any follow-up question required at the bottom of the response please include it(NO PREAMBLE)
-        ### DON'T ADD any QUESTION TO THE RESPONSE
+        You are an expert for answering menstrual period related question. Your job is to connect user question and answer and no need to repeat your question. response based on the documents. don't add extra information. For large response, you can use points rather than heavy answer. IF there is any follow-up question required at the bottom of the response please include it(NO PREAMBLE)
+        ### TRY TO GIVE SHORT DIRECT RESPONSE AND DON'T ADD ANY EXTRA INFO THAT ISN'T ASKED RATHER GIVE FOLLOW-UP QUESTION. DON'T ADD ANY PREAMBLE.
+        ### RESPONSE CAN CONTAIN FOLLOW-UP QUESTION IF THERE IS ANY.OTHER THAN FOLLOW-UP QUESTION, THERE SHOULD NOT ANY OTHER QUESTION
         """
 
         prompt_template = PromptTemplate.from_template(template)
