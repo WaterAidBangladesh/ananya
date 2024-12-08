@@ -1,10 +1,11 @@
 import streamlit as st
 import os
 import dotenv
+import uuid
 
 from langchain_groq import ChatGroq
 
-from app import Chain
+from app import Chain, MainApp
 
 dotenv.load_dotenv()
 
@@ -22,6 +23,9 @@ llm = ChatGroq(
 # Store chat messages
 if "messages" not in st.session_state:
     st.session_state.messages = [{"role": "assistant", "content": "How may I assist you today?"}]
+
+if 'session_id' not in st.session_state:
+    st.session_state['session_id'] = str(uuid.uuid4())
 
 
 # Function for clearing chat history
@@ -59,7 +63,11 @@ if st.session_state.messages[-1]["role"] != "assistant":
     with st.chat_message("assistant"):
         with st.spinner("Thinking..."):
             chain = Chain()
-            response = chain.get_response(st.session_state.messages[-1]["content"], 123)
+            app = MainApp()
+            if st.session_state.messages[-1]["content"].lower() in ['/start', 'hello', 'hi', 'greetings', 'hlw']:
+                response = app.get_intro_response()
+            else:
+                response = app.chain.get_response(st.session_state.messages[-1]["content"], st.session_state['session_id'])
             st.write(response)
     st.session_state.messages.append({"role": "assistant", "content": response})
 
