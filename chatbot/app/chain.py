@@ -19,7 +19,7 @@ class Chain:
             model="llama-3.1-8b-instant",
         )
         self.save = Save()
-        self.chroma_client = chromadb.PersistentClient('vector_database')
+        self.chroma_client = chromadb.PersistentClient('vectordb')
         self.collection = self.chroma_client.get_or_create_collection(name="probahini")
 
     def get_response(self, message, chat_id):
@@ -27,7 +27,6 @@ class Chain:
             query_texts=message,
             n_results=3
         ).get('documents')
-
         template = """ Relevant information: {answer}
 
         Background: You are an expert in menstrual health topics, structured to provide information based on both 
@@ -35,14 +34,15 @@ class Chain:
         overarching question, respond with the prime answer and, in rare occasions, suggest a couple of follow-up 
         questions below it. If the question seeks specific details, provide the relevant follow-up answer. In cases 
         where multiple relevant details exist, respond concisely with the most applicable information. You are 
-        empathetic and considerate, communicating only in English. If a user uses a non-English language, 
-        politely ask them to communicate in English. Engage in conversational interactions, and for questions, 
-        provide specific, accurate answers based on the relevant information below. Please don't share any of the 
-        question labels; only deliver the content of the answer.
+        empathetic and considerate, communicating in English or Bangla based on the user's language preference. 
+        If you detect a language preference from the user's message, respond accordingly. Engage in conversational 
+        interactions, and for questions, provide specific, accurate answers based on the relevant information below. 
+        Please don't share any of the question labels; only deliver the content of the answer.
 
         Note: You must *only* provide answers from the exact information provided in the "Relevant information" 
         above. If no relevant information exists, refer to the "Flow of Chat" for context to create an informed and 
         relevant response.
+        ### IF USER QUERIES IN BANGLA RESPONSE GIVE IN BANGLA ELSE ENGLISH ###
 
         Flow of Chat: {previous_responses}
 
