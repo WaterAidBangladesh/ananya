@@ -17,20 +17,17 @@ from .utils import *
 @permission_classes([AllowAny])
 def user_signup(request):
     if request.method == 'POST':
-        if User.objects.filter(email=request.data.get('email')).exists():
-            return Response({"error": "Email already taken"}, status=status.HTTP_400_BAD_REQUEST)
         if User.objects.filter(phone=request.data.get('phone')).exists():
             return Response({"error": "Phone already in use"}, status=status.HTTP_400_BAD_REQUEST)
 
-        if not request.data.get('is_superuser', False):
-            user_data = request.data.copy()
-            user_data['password'] = make_password(user_data['password'])
+        user_data = request.data.copy()
+        user_data['password'] = make_password(user_data['password'])
 
-            serializer = UserSerializer(data=user_data)
-            if serializer.is_valid():
-                serializer.save()
-                return Response({"message": "User created successfully"}, status=status.HTTP_201_CREATED)
-            return Response({"error": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+        serializer = UserSerializer(data=user_data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response({"message": "User created successfully"}, status=status.HTTP_201_CREATED)
+        return Response({"error": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
 
 
 @api_view(['POST'])
@@ -42,9 +39,6 @@ def super_user_signup(request):
         if not user_data:
             return Response({"error": "User data is missing"}, status=status.HTTP_400_BAD_REQUEST)
 
-        if 'email' not in user_data or not user_data['email']:
-            return Response({"error": "Email is required"}, status=status.HTTP_400_BAD_REQUEST)
-
         if 'phone' not in user_data or not user_data.get('phone'):
             return Response({"error": "Username is required"}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -53,9 +47,6 @@ def super_user_signup(request):
 
         if User.objects.filter(phone=user_data.get('phone')).exists():
             return Response({"error": "phone already taken"}, status=status.HTTP_400_BAD_REQUEST)
-
-        if User.objects.filter(email=user_data.get('email')).exists():
-            return Response({"error": "Email already in use"}, status=status.HTTP_400_BAD_REQUEST)
 
         user_data['password'] = make_password(user_data['password'])
         superuser_data = request.data
@@ -139,6 +130,7 @@ def forget_password(request):
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     return Response({"error": "Invalid credentials"}, status=status.HTTP_403_FORBIDDEN)
+
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])

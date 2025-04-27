@@ -25,7 +25,7 @@ class UserManager(BaseUserManager):
 
 class User(AbstractBaseUser, PermissionsMixin):
     name = models.TextField()
-    email = models.EmailField(unique=True)
+    email = models.EmailField(unique=True, blank=True, null=True)
     password = models.TextField()
     phone = models.TextField(unique=True)
     date_of_birth = models.DateField()
@@ -34,8 +34,8 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     objects = UserManager()
 
-    USERNAME_FIELD = 'email'
-    REQUIRED_FIELDS = ['name', 'phone', 'date_of_birth', 'district', 'project']
+    USERNAME_FIELD = 'phone'
+    REQUIRED_FIELDS = ['name', 'date_of_birth', 'district', 'project']
 
 
 class SuperUser(models.Model):
