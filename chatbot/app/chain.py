@@ -16,7 +16,7 @@ class Chain:
         self.llm = ChatGroq(
             temperature=0,
             groq_api_key=os.getenv('GROQ_API_KEY'),
-            model="llama-3.1-8b-instant",
+            model="openai/gpt-oss-20b",
         )
         self.save = Save()
         self.chroma_client = chromadb.PersistentClient('vectordb')
