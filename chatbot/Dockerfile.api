@@ -1,0 +1,53 @@
+# Probahini as a JSON API, for the Ananya mobile app.
+#
+# The Streamlit page in app/streamlit_code.py answers a browser: it serves
+# HTML and drives the conversation over a WebSocket, so a plain POST to it
+# returns 405 and the mobile app cannot use it. This image runs the same
+# Chain.get_response() behind an HTTP endpoint instead.
+#
+# A second Dockerfile on purpose: the existing Dockerfile and the live
+# Streamlit service are left exactly as they are.
+#
+# On Render: New > Web Service > Public Git Repository > this repo, with
+#   Branch          = api
+#   Root Directory  = chatbot
+#   Dockerfile Path = ./Dockerfile.api
+# Root Directory matters: every COPY below is relative to chatbot/, so a build
+# started at the repository root cannot find requirements.txt or vectordb/.
+#
+# Set GROQ_API_KEY in the service's environment.
+
+FROM python:3.11-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY requirements.txt .
+
+RUN pip install --no-cache-dir --upgrade pip \
+    && pip install --no-cache-dir -r requirements.txt
+
+COPY app/ ./app/
+
+COPY mergedd_bn_en.pdf ./
+COPY vector_database/ ./vector_database/
+COPY vectordb/ ./vectordb/
+
+# chain.py does `from save import Save` and api.py does `from chain import
+# Chain` — flat imports that only resolve with app/ itself on the path.
+# Streamlit adds the script's directory automatically; uvicorn does not.
+ENV PYTHONPATH=/app/app
+
+EXPOSE 8501
+
+# Working directory stays /app, because chain.py opens the vector store by the
+# relative path 'vectordb'.
+# Shell form on purpose: Render supplies the port in $PORT, and only the
+# shell expands it. The fallback keeps local `docker run` working.
+CMD uvicorn api:app --host 0.0.0.0 --port ${PORT:-8501}
