@@ -51,9 +51,15 @@ class Chain:
         self.collection = self.chroma_client.get_or_create_collection(name="probahini")
 
     def get_response(self, message, chat_id):
+        # Six, not three. Each entry used to be an entire PDF page, so three
+        # of them was already far more text than any answer needed. The store
+        # is now built by build_vectordb.py in chunks of about a row or two,
+        # so six of those carry more genuinely relevant material than three
+        # pages did, at a fraction of the size — and small chunks make
+        # retrieval less forgiving, which a wider net offsets.
         retriever = self.collection.query(
             query_texts=message,
-            n_results=3
+            n_results=6
         ).get('documents')
         template = """ Relevant information: {answer}
 

@@ -37,7 +37,19 @@ COPY app/ ./app/
 
 COPY mergedd_bn_en.pdf ./
 COPY vector_database/ ./vector_database/
-COPY vectordb/ ./vectordb/
+
+# vectordb/ is deliberately NOT copied. The committed one holds whole PDF
+# pages, because the notebook that produced it never called the text splitter
+# it imported, and three of those pages is the ~18,000 tokens every question
+# was shipping. It is rebuilt here from the PDF instead, properly chunked, so
+# the store in the image always matches the source document.
+#
+# This step also downloads Chroma's 79MB embedding model and bakes it into the
+# image. Without it, the free instance — whose container is destroyed whenever
+# it sleeps — re-downloads that model on the first question after every idle
+# period, adding around ten seconds to an already slow cold start.
+COPY build_vectordb.py .
+RUN python build_vectordb.py
 
 # chain.py does `from save import Save` and api.py does `from chain import
 # Chain` — flat imports that only resolve with app/ itself on the path.
