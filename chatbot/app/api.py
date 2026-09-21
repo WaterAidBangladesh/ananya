@@ -108,3 +108,85 @@ def chat(req: ChatRequest):
 def health():
     """Cheap endpoint for Render's health check, so it does not wake the model."""
     return {"status": "ok"}
+
+
+# ---------------------------------------------------------------------------
+# Temporary diagnostic. Remove once the empty-answer question is settled.
+#
+# get_response() returns res.content and throws the rest of the reply away, so
+# when content is empty there is nothing left to explain why. This repeats the
+# same call — same retrieval, same prompt, same model — and reports what came
+# back around the content: the finish reason, the token counts, and whether
+# the model put its output somewhere other than `content`.
+#
+# It answers one question: is the model producing nothing, or producing
+# something the code is not reading?
+# ---------------------------------------------------------------------------
+
+_DEBUG_TEMPLATE = """ Relevant information: {answer}
+
+        Background: You are an expert in menstrual health topics, structured to provide information based on both
+        high-level (prime) and specific (follow-up) questions. If the user message aligns with a general or
+        overarching question, respond with the prime answer and, in rare occasions, suggest a couple of follow-up
+        questions below it. If the question seeks specific details, provide the relevant follow-up answer. In cases
+        where multiple relevant details exist, respond concisely with the most applicable information. You are
+        empathetic and considerate, communicating in English or Bangla based on the user's language preference.
+        If you detect a language preference from the user's message, respond accordingly. Engage in conversational
+        interactions, and for questions, provide specific, accurate answers based on the relevant information below.
+        Please don't share any of the question labels; only deliver the content of the answer.
+
+        Note: You must *only* provide answers from the exact information provided in the "Relevant information"
+        above. If no relevant information exists, refer to the "Flow of Chat" for context to create an informed and
+        relevant response.
+        ### IF USER QUERIES IN BANGLA RESPONSE GIVE IN BANGLA ELSE ENGLISH ###
+
+        Flow of Chat: {previous_responses}
+
+        User message: {user_question}
+
+        (NO PREAMBLE)
+        """
+
+
+@app.post("/debug/raw")
+def debug_raw(req: ChatRequest):
+    """Report what the model actually returned, not just its content."""
+    from langchain_core.prompts import PromptTemplate
+
+    retrieved = chain.collection.query(
+        query_texts=req.query, n_results=3
+    ).get("documents")
+    retrieved_chars = len(str(retrieved))
+
+    prompt = PromptTemplate.from_template(_DEBUG_TEMPLATE)
+    runnable = prompt | chain.llm
+
+    try:
+        res = runnable.invoke(
+            input={
+                "user_question": req.query,
+                "answer": retrieved,
+                "previous_responses": "",
+            }
+        )
+    except Exception as exc:  # noqa: BLE001
+        return {"raised": str(exc)[:600]}
+
+    extra = getattr(res, "additional_kwargs", {}) or {}
+    meta = getattr(res, "response_metadata", {}) or {}
+
+    # Reasoning models can return their working here instead of in content.
+    reasoning = extra.get("reasoning") or ""
+
+    return {
+        "retrieved_chars": retrieved_chars,
+        "content_len": len(res.content or ""),
+        "content_head": (res.content or "")[:200],
+        "finish_reason": meta.get("finish_reason"),
+        "token_usage": meta.get("token_usage"),
+        "model_name": meta.get("model_name"),
+        "usage_metadata": getattr(res, "usage_metadata", None),
+        "additional_kwargs_keys": sorted(extra.keys()),
+        "reasoning_len": len(reasoning),
+        "reasoning_head": reasoning[:400],
+    }
