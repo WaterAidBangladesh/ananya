@@ -51,15 +51,25 @@ class Chain:
         self.collection = self.chroma_client.get_or_create_collection(name="probahini")
 
     def get_response(self, message, chat_id):
-        # Six, not three. Each entry used to be an entire PDF page, so three
-        # of them was already far more text than any answer needed. The store
-        # is now built by build_vectordb.py in chunks of about a row or two,
-        # so six of those carry more genuinely relevant material than three
-        # pages did, at a fraction of the size — and small chunks make
-        # retrieval less forgiving, which a wider net offsets.
+        # Ten, not three. Each entry used to be an entire PDF page, so three
+        # of them was already far more text than any answer needed — measured
+        # at 17,978 prompt tokens for one Bangla question. The store is now
+        # built by build_vectordb.py in chunks of about a row or two.
+        #
+        # Six chunks was the first attempt and measured 1,538 prompt tokens,
+        # but answers came back roughly 40% shorter: one about irregular
+        # periods at 14 dropped its "see a healthcare provider if the bleeding
+        # is heavy" advice, which is not the kind of line to lose from an app
+        # for adolescent girls. Small chunks make retrieval less forgiving, so
+        # the net has to be wider than the old three.
+        #
+        # Ten costs roughly 2,500 prompt tokens: still seven times lighter
+        # than whole pages, with enough room for a row's neighbours — the
+        # follow-up suggestions and escalation advice that sit beside it in
+        # the source table.
         retriever = self.collection.query(
             query_texts=message,
-            n_results=6
+            n_results=10
         ).get('documents')
         template = """ Relevant information: {answer}
 
