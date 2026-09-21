@@ -44,8 +44,22 @@ import shutil
 import sys
 
 import chromadb
-from langchain_community.document_loaders import PyPDFLoader
-from langchain.text_splitter import RecursiveCharacterTextSplitter
+
+# requirements.txt pins nothing, so the version installed at build time moves.
+# Probahini.ipynb was written against langchain 0.3.x, where both of these
+# lived under `langchain.*`; the image now resolves langchain 1.4.x, where
+# `langchain.text_splitter` no longer exists and the splitter has its own
+# package. Import the current location first and keep the old one as a
+# fallback, so this script survives the version drifting either way.
+try:
+    from langchain_text_splitters import RecursiveCharacterTextSplitter
+except ImportError:  # pragma: no cover - older langchain
+    from langchain.text_splitter import RecursiveCharacterTextSplitter
+
+try:
+    from langchain_community.document_loaders import PyPDFLoader
+except ImportError:  # pragma: no cover - older langchain
+    from langchain.document_loaders import PyPDFLoader
 
 PDF = "mergedd_bn_en.pdf"
 STORE = "vectordb"
