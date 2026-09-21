@@ -13,22 +13,39 @@ user_history = {}
 
 class Chain:
     def __init__(self):
-        self.llm = ChatGroq(
+        # gpt-oss reasons privately before it answers, and both come out of one
+        # output allowance. Two measurements on the same Bangla question, which
+        # carries ~18,000 tokens of retrieved text:
+        #
+        #   max_tokens 2048 -> 2046 reasoning tokens, finish_reason "length"
+        #   max_tokens 8192 -> 8190 reasoning tokens, finish_reason "length"
+        #
+        # Both returned an empty answer. Raising the ceiling only bought more
+        # reasoning: faced with three whole PDF pages of largely unrelated
+        # text, the model will think for as long as it is allowed and never
+        # reach the answer. English questions retrieve less and fit, which is
+        # why only Bangla looked broken.
+        #
+        # So the limit is not the lever — the amount of thinking is.
+        # reasoning_effort caps that directly.
+        llm_kwargs = dict(
             temperature=0,
             groq_api_key=os.getenv('GROQ_API_KEY'),
             model="openai/gpt-oss-20b",
-            # gpt-oss reasons privately before it answers, and both come out of
-            # one output allowance. Groq's default is 2048, which is not enough
-            # here: with the ~18,000 tokens of retrieved text this prompt
-            # carries, a Bangla question was measured spending 2046 of those
-            # 2048 tokens on reasoning and getting cut off — finish_reason
-            # "length" — before writing any of the answer. The reply came back
-            # empty, every time, for that question.
-            #
-            # English questions retrieve less text, need less reasoning, and
-            # fit inside 2048, which is why only Bangla appeared broken.
             max_tokens=8192,
         )
+        try:
+            # Named argument rather than model_kwargs: if this version of
+            # langchain-groq knows the field it binds directly, and if it does
+            # not, ChatGroq folds unknown kwargs into model_kwargs and Groq
+            # receives it anyway.
+            self.llm = ChatGroq(**llm_kwargs, reasoning_effort="low")
+        except Exception:
+            # Never let an unsupported parameter stop the service from
+            # starting. Without this the container would crash on import and
+            # take the whole chatbot down, which is a far worse failure than
+            # the one being fixed.
+            self.llm = ChatGroq(**llm_kwargs)
         self.save = Save()
         self.chroma_client = chromadb.PersistentClient('vectordb')
         self.collection = self.chroma_client.get_or_create_collection(name="probahini")
