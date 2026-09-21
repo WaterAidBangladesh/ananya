@@ -17,6 +17,17 @@ class Chain:
             temperature=0,
             groq_api_key=os.getenv('GROQ_API_KEY'),
             model="openai/gpt-oss-20b",
+            # gpt-oss reasons privately before it answers, and both come out of
+            # one output allowance. Groq's default is 2048, which is not enough
+            # here: with the ~18,000 tokens of retrieved text this prompt
+            # carries, a Bangla question was measured spending 2046 of those
+            # 2048 tokens on reasoning and getting cut off — finish_reason
+            # "length" — before writing any of the answer. The reply came back
+            # empty, every time, for that question.
+            #
+            # English questions retrieve less text, need less reasoning, and
+            # fit inside 2048, which is why only Bangla appeared broken.
+            max_tokens=8192,
         )
         self.save = Save()
         self.chroma_client = chromadb.PersistentClient('vectordb')
