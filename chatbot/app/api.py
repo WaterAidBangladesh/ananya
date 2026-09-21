@@ -20,7 +20,7 @@ import os
 from fastapi import FastAPI
 from pydantic import BaseModel
 
-from chain import Chain, user_history
+from chain import Chain, user_history, N_RESULTS
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("probahini-api")
@@ -154,7 +154,7 @@ def debug_raw(req: ChatRequest):
     from langchain_core.prompts import PromptTemplate
 
     retrieved = chain.collection.query(
-        query_texts=req.query, n_results=3
+        query_texts=req.query, n_results=N_RESULTS
     ).get("documents")
     retrieved_chars = len(str(retrieved))
 

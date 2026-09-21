@@ -10,6 +10,14 @@ dotenv.load_dotenv()
 
 user_history = {}
 
+# How many chunks to paste into each prompt.
+#
+# A module constant rather than a literal at the call site, because the
+# diagnostic endpoint in api.py needs to measure the same prompt the app
+# actually sends. It had its own hardcoded 3, so every token figure it
+# reported described a request nobody was making.
+N_RESULTS = 10
+
 
 class Chain:
     def __init__(self):
@@ -51,25 +59,19 @@ class Chain:
         self.collection = self.chroma_client.get_or_create_collection(name="probahini")
 
     def get_response(self, message, chat_id):
-        # Ten, not three. Each entry used to be an entire PDF page, so three
-        # of them was already far more text than any answer needed — measured
-        # at 17,978 prompt tokens for one Bangla question. The store is now
-        # built by build_vectordb.py in chunks of about a row or two.
-        #
-        # Six chunks was the first attempt and measured 1,538 prompt tokens,
-        # but answers came back roughly 40% shorter: one about irregular
-        # periods at 14 dropped its "see a healthcare provider if the bleeding
-        # is heavy" advice, which is not the kind of line to lose from an app
-        # for adolescent girls. Small chunks make retrieval less forgiving, so
-        # the net has to be wider than the old three.
-        #
-        # Ten costs roughly 2,500 prompt tokens: still seven times lighter
-        # than whole pages, with enough room for a row's neighbours — the
-        # follow-up suggestions and escalation advice that sit beside it in
-        # the source table.
+        # See N_RESULTS above. Each entry used to be an entire PDF page, and
+        # three of those measured 17,978 prompt tokens for one Bangla
+        # question. The store is now chunked to about a row or two per entry,
+        # so the count has to rise — six chunks answered correctly but ran
+        # roughly 40% shorter, and one answer about irregular periods at 14
+        # dropped its "see a healthcare provider if the bleeding is heavy"
+        # line, which is not the kind of thing to lose from an app for
+        # adolescent girls. Small chunks retrieve precisely but narrowly; the
+        # neighbouring rows carry the follow-up suggestions and the escalation
+        # advice.
         retriever = self.collection.query(
             query_texts=message,
-            n_results=10
+            n_results=N_RESULTS
         ).get('documents')
         template = """ Relevant information: {answer}
 
